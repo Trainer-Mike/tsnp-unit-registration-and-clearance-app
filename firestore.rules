@@ -1,0 +1,66 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    match /registrations/{registrationId} {
+      allow read, write: if isValidId(registrationId);
+    }
+
+    match /students/{studentId} {
+      allow read, write: if isValidId(studentId);
+    }
+
+    match /users/{userId} {
+      allow read, write: if isValidId(userId);
+    }
+
+    match /trainers/{trainerId} {
+      allow read, write: if isValidId(trainerId);
+    }
+
+    match /units/{unitId} {
+      allow read, write: if isValidId(unitId);
+    }
+
+    match /courses/{courseId} {
+      allow read, write: if isValidId(courseId);
+    }
+
+    match /departments/{departmentId} {
+      allow read, write: if isValidId(departmentId);
+    }
+
+    match /levels/{levelId} {
+      allow read, write: if isValidId(levelId);
+    }
+
+    match /series/{seriesId} {
+      allow read, write: if isValidId(seriesId);
+    }
+
+    match /notifications/{notificationId} {
+      allow read, write: if isValidId(notificationId);
+    }
+
+    match /institution_config/{configId} {
+      allow read, write: if isValidId(configId);
+    }
+
+    match /audit_logs/{logId} {
+      allow read, write: if isValidId(logId);
+    }
+
+    match /unit_categories/{catId} {
+      allow read, write: if isValidId(catId);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "TSNP Unit Assessment Registration & Clearance System",
+  "description": "Online TSNP/CDACC Assessment Unit Registration, Trainer Verification, HOD Clearance and PDF Generation System for The Shamberere National Polytechnic.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
