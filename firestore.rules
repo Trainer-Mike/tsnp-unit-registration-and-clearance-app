@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /registrations/{registrationId} {
+      allow read, write: if true;
+    }
+
+    match /students/{studentId} {
+      allow read, write: if true;
+    }
+
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    match /trainers/{trainerId} {
+      allow read, write: if true;
+    }
+
+    match /units/{unitId} {
+      allow read, write: if true;
+    }
+
+    match /courses/{courseId} {
+      allow read, write: if true;
+    }
+
+    match /departments/{departmentId} {
+      allow read, write: if true;
+    }
+
+    match /levels/{levelId} {
+      allow read, write: if true;
+    }
+
+    match /series/{seriesId} {
+      allow read, write: if true;
+    }
+
+    match /notifications/{notificationId} {
+      allow read, write: if true;
+    }
+
+    match /institution_config/{configId} {
+      allow read, write: if true;
+    }
+
+    match /audit_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    match /unit_categories/{catId} {
+      allow read, write: if true;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

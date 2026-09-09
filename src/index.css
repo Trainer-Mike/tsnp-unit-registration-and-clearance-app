@@ -1,0 +1,482 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-page: #090d16;
+    --text-primary: #e2e8f0;
+  }
+
+  html.light {
+    --bg-page: #f8fafc;
+    --text-primary: #0f172a;
+    color-scheme: light;
+  }
+
+  html.dark {
+    --bg-page: #090d16;
+    --text-primary: #e2e8f0;
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    letter-spacing: -0.01em;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+}
+
+/* ==========================================================================
+   LIGHT MODE COMPREHENSIVE HIGH-CONTRAST THEME
+   ========================================================================== */
+
+/* Base Canvas & Wrapper Surfaces */
+html.light,
+html.light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.light .bg-slate-950,
+html.light .bg-\[\#090D16\],
+html.light .bg-\[\#0B0F19\] {
+  background-color: #f8fafc !important;
+}
+
+/* Primary Cards, Panels & Modals */
+html.light .bg-slate-900,
+html.light .bg-slate-900\/95,
+html.light .bg-slate-900\/90,
+html.light .bg-slate-900\/85,
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/70,
+html.light .bg-slate-900\/60,
+html.light .bg-slate-900\/50,
+html.light .bg-slate-900\/40 {
+  background-color: #ffffff !important;
+}
+
+/* Inner Sections, Sub-Cards, Table Headers & Top Strips */
+html.light .bg-slate-950\/95,
+html.light .bg-slate-950\/90,
+html.light .bg-slate-950\/85,
+html.light .bg-slate-950\/80,
+html.light .bg-slate-950\/70,
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/50,
+html.light .bg-slate-950\/40,
+html.light .bg-slate-950\/30 {
+  background-color: #f1f5f9 !important;
+}
+
+/* Secondary Action Buttons, Chips & Interactive Row Backgrounds */
+html.light .bg-slate-800,
+html.light .bg-slate-800\/95,
+html.light .bg-slate-800\/90,
+html.light .bg-slate-800\/85,
+html.light .bg-slate-800\/80,
+html.light .bg-slate-800\/70,
+html.light .bg-slate-800\/60,
+html.light .bg-slate-800\/50 {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .hover\:bg-slate-800:hover,
+html.light .hover\:bg-slate-700:hover {
+  background-color: #e2e8f0 !important;
+}
+
+/* Borders in Light Mode */
+html.light .border-slate-950,
+html.light .border-slate-900,
+html.light .border-slate-800,
+html.light .border-slate-800\/90,
+html.light .border-slate-800\/80,
+html.light .border-slate-800\/70,
+html.light .border-slate-800\/60,
+html.light .border-slate-800\/50 {
+  border-color: #e2e8f0 !important;
+}
+
+html.light .border-slate-700,
+html.light .border-slate-700\/90,
+html.light .border-slate-700\/80,
+html.light .border-slate-700\/70,
+html.light .border-slate-700\/60,
+html.light .border-slate-700\/50 {
+  border-color: #cbd5e1 !important;
+}
+
+html.light .border-slate-600 {
+  border-color: #94a3b8 !important;
+}
+
+/* ==========================================================================
+   LIGHT MODE TYPOGRAPHY CONTRAST (Deep, clear, strain-free)
+   ========================================================================== */
+
+/* Main Headings & Primary Text */
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #0f172a !important;
+}
+
+/* Ensure text-white inside dark background buttons stays white, but on surfaces becomes dark */
+html.light .text-white:not([class*="bg-emerald-"]):not([class*="bg-teal-"]):not([class*="bg-cyan-"]):not([class*="bg-blue-"]):not([class*="bg-indigo-"]):not([class*="bg-rose-"]):not([class*="bg-red-"]):not([class*="bg-purple-"]):not([class*="bg-amber-"]):not([class*="bg-slate-900"]):not(.keep-white) {
+  color: #0f172a !important;
+}
+
+/* Secondary Body Text & Subtitles (high contrast slate) */
+html.light .text-slate-300 {
+  color: #1e293b !important;
+}
+
+/* Helper & Descriptive Labels (darkened from faint gray to readable slate-600) */
+html.light .text-slate-400 {
+  color: #334155 !important;
+}
+
+/* Muted / Secondary Footnotes */
+html.light .text-slate-500 {
+  color: #64748b !important;
+}
+
+html.light .text-slate-600 {
+  color: #475569 !important;
+}
+
+/* Keep solid buttons text crisp */
+html.light .bg-emerald-600 .text-white,
+html.light .bg-cyan-600 .text-white,
+html.light .bg-blue-600 .text-white,
+html.light .bg-rose-600 .text-white,
+html.light .bg-purple-600 .text-white,
+html.light .bg-indigo-600 .text-white,
+html.light button.bg-emerald-600,
+html.light button.bg-cyan-600,
+html.light button.bg-blue-600,
+html.light button.bg-rose-600,
+html.light button.bg-purple-600,
+html.light button.bg-indigo-600,
+html.light .bg-slate-900.text-white {
+  color: #ffffff !important;
+}
+
+/* ==========================================================================
+   STATUS BADGES & COLOR PALETTE IN LIGHT MODE (Rich, deep colors)
+   ========================================================================== */
+
+/* Cyan & Sky Accents */
+html.light .text-cyan-400,
+html.light .text-cyan-300,
+html.light .text-cyan-200,
+html.light .text-sky-400,
+html.light .text-sky-300 {
+  color: #0284c7 !important;
+}
+
+html.light .bg-cyan-950,
+html.light .bg-cyan-950\/90,
+html.light .bg-cyan-950\/80,
+html.light .bg-cyan-950\/70,
+html.light .bg-cyan-950\/60,
+html.light .bg-cyan-950\/50,
+html.light .bg-cyan-950\/40,
+html.light .bg-cyan-500\/10,
+html.light .bg-cyan-500\/20,
+html.light .bg-cyan-500\/5 {
+  background-color: #f0f9ff !important;
+}
+
+html.light .border-cyan-800,
+html.light .border-cyan-800\/80,
+html.light .border-cyan-800\/60,
+html.light .border-cyan-800\/50,
+html.light .border-cyan-700,
+html.light .border-cyan-500\/40,
+html.light .border-cyan-500\/30,
+html.light .border-cyan-500\/20 {
+  border-color: #bae6fd !important;
+}
+
+/* Emerald & Teal Accents */
+html.light .text-emerald-400,
+html.light .text-emerald-300,
+html.light .text-emerald-200,
+html.light .text-teal-400,
+html.light .text-teal-300 {
+  color: #047857 !important;
+}
+
+html.light .bg-emerald-950,
+html.light .bg-emerald-950\/90,
+html.light .bg-emerald-950\/80,
+html.light .bg-emerald-950\/70,
+html.light .bg-emerald-950\/60,
+html.light .bg-emerald-950\/50,
+html.light .bg-emerald-950\/40,
+html.light .bg-emerald-500\/10,
+html.light .bg-emerald-500\/20,
+html.light .bg-emerald-500\/5,
+html.light .bg-teal-500\/10 {
+  background-color: #ecfdf5 !important;
+}
+
+html.light .border-emerald-800,
+html.light .border-emerald-800\/80,
+html.light .border-emerald-800\/60,
+html.light .border-emerald-800\/50,
+html.light .border-emerald-700,
+html.light .border-emerald-500\/40,
+html.light .border-emerald-500\/30,
+html.light .border-emerald-500\/20 {
+  border-color: #a7f3d0 !important;
+}
+
+/* Blue & Indigo Accents */
+html.light .text-blue-400,
+html.light .text-blue-300,
+html.light .text-blue-200,
+html.light .text-indigo-400,
+html.light .text-indigo-300 {
+  color: #1d4ed8 !important;
+}
+
+html.light .bg-blue-950,
+html.light .bg-blue-950\/90,
+html.light .bg-blue-950\/80,
+html.light .bg-blue-950\/70,
+html.light .bg-blue-950\/60,
+html.light .bg-blue-950\/50,
+html.light .bg-blue-950\/40,
+html.light .bg-blue-500\/10,
+html.light .bg-blue-500\/20,
+html.light .bg-indigo-500\/10 {
+  background-color: #eff6ff !important;
+}
+
+html.light .border-blue-800,
+html.light .border-blue-800\/80,
+html.light .border-blue-800\/60,
+html.light .border-blue-800\/50,
+html.light .border-blue-700,
+html.light .border-blue-500\/40,
+html.light .border-blue-500\/30,
+html.light .border-blue-500\/20 {
+  border-color: #bfdbfe !important;
+}
+
+/* Amber, Yellow & Orange Accents (Prevent pale yellow unreadable text) */
+html.light .text-amber-400,
+html.light .text-amber-300,
+html.light .text-amber-200,
+html.light .text-yellow-400,
+html.light .text-yellow-300,
+html.light .text-orange-400,
+html.light .text-orange-300 {
+  color: #b45309 !important;
+}
+
+html.light .bg-amber-950,
+html.light .bg-amber-950\/90,
+html.light .bg-amber-950\/80,
+html.light .bg-amber-950\/70,
+html.light .bg-amber-950\/60,
+html.light .bg-amber-950\/50,
+html.light .bg-amber-950\/40,
+html.light .bg-amber-500\/10,
+html.light .bg-amber-500\/20,
+html.light .bg-orange-500\/10 {
+  background-color: #fffbeb !important;
+}
+
+html.light .border-amber-800,
+html.light .border-amber-800\/80,
+html.light .border-amber-800\/60,
+html.light .border-amber-800\/50,
+html.light .border-amber-700,
+html.light .border-amber-500\/40,
+html.light .border-amber-500\/30,
+html.light .border-amber-500\/20,
+html.light .border-orange-500\/30 {
+  border-color: #fde68a !important;
+}
+
+/* Purple & Violet Accents */
+html.light .text-purple-400,
+html.light .text-purple-300,
+html.light .text-purple-200,
+html.light .text-violet-400,
+html.light .text-violet-300 {
+  color: #6d28d9 !important;
+}
+
+html.light .bg-purple-950,
+html.light .bg-purple-950\/90,
+html.light .bg-purple-950\/80,
+html.light .bg-purple-950\/70,
+html.light .bg-purple-950\/60,
+html.light .bg-purple-950\/50,
+html.light .bg-purple-950\/40,
+html.light .bg-purple-500\/10,
+html.light .bg-purple-500\/20 {
+  background-color: #f5f3ff !important;
+}
+
+html.light .border-purple-800,
+html.light .border-purple-800\/80,
+html.light .border-purple-800\/60,
+html.light .border-purple-800\/50,
+html.light .border-purple-700,
+html.light .border-purple-500\/40,
+html.light .border-purple-500\/30,
+html.light .border-purple-500\/20 {
+  border-color: #ddd6fe !important;
+}
+
+/* Rose & Red Accents */
+html.light .text-rose-400,
+html.light .text-rose-300,
+html.light .text-rose-200,
+html.light .text-red-400,
+html.light .text-red-300 {
+  color: #be123c !important;
+}
+
+html.light .bg-rose-950,
+html.light .bg-rose-950\/90,
+html.light .bg-rose-950\/80,
+html.light .bg-rose-950\/70,
+html.light .bg-rose-950\/60,
+html.light .bg-rose-950\/50,
+html.light .bg-rose-950\/40,
+html.light .bg-rose-500\/10,
+html.light .bg-rose-500\/20,
+html.light .bg-red-500\/10 {
+  background-color: #fff1f2 !important;
+}
+
+html.light .border-rose-800,
+html.light .border-rose-800\/80,
+html.light .border-rose-800\/60,
+html.light .border-rose-800\/50,
+html.light .border-rose-700,
+html.light .border-rose-500\/40,
+html.light .border-rose-500\/30,
+html.light .border-rose-500\/20 {
+  border-color: #fecdd3 !important;
+}
+
+/* ==========================================================================
+   GRADIENT ADAPTATION FOR LIGHT MODE
+   ========================================================================== */
+html.light .from-slate-900,
+html.light .from-slate-950 {
+  --tw-gradient-from: #ffffff var(--tw-gradient-from-position) !important;
+}
+
+html.light .via-slate-900,
+html.light .via-slate-950,
+html.light .via-slate-900\/95 {
+  --tw-gradient-via: #f8fafc var(--tw-gradient-via-position) !important;
+}
+
+html.light .to-slate-900,
+html.light .to-slate-950,
+html.light .to-slate-950\/70 {
+  --tw-gradient-to: #f1f5f9 var(--tw-gradient-to-position) !important;
+}
+
+/* ==========================================================================
+   FORM INPUTS, SELECTS, OPTGROUPS & TEXTAREAS
+   ========================================================================== */
+html.light input:not([type="checkbox"]):not([type="radio"]),
+html.light select,
+html.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light select option,
+html.light select optgroup {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #64748b !important;
+}
+
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
+}
+
+/* ==========================================================================
+   TABLES & DATA GRIDS
+   ========================================================================== */
+html.light table thead {
+  background-color: #f1f5f9 !important;
+}
+
+html.light table thead th {
+  color: #334155 !important;
+  font-weight: 700 !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light table tbody tr {
+  border-color: #e2e8f0 !important;
+}
+
+html.light table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* ==========================================================================
+   MODALS, OVERLAYS & ELEVATIONS
+   ========================================================================== */
+html.light .fixed.inset-0.bg-slate-950\/80,
+html.light .fixed.inset-0.bg-slate-950\/85 {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(4px);
+}
+
+html.light .shadow-2xl,
+html.light .shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light .shadow-black\/70,
+html.light .shadow-black\/80,
+html.light .shadow-black\/40,
+html.light .shadow-black\/30 {
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -4px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 165, 233, 0.7);
+}
+
+
+

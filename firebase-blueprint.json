@@ -1,0 +1,147 @@
+{
+  "entities": {
+    "Registration": {
+      "title": "Registration",
+      "description": "Student unit registration and clearance record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studentId": { "type": "string", "maxLength": 128 },
+        "seriesId": { "type": "string", "maxLength": 128 },
+        "departmentId": { "type": "string", "maxLength": 128 },
+        "courseId": { "type": "string", "maxLength": 128 },
+        "levelId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "maxLength": 64 },
+        "submittedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "studentId", "seriesId", "status"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student profile and institutional information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "admissionNumber": { "type": "string", "maxLength": 64 },
+        "fullName": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "nationalId": { "type": "string", "maxLength": 64 },
+        "departmentId": { "type": "string", "maxLength": 128 },
+        "courseId": { "type": "string", "maxLength": 128 },
+        "levelId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "admissionNumber", "fullName"]
+    },
+    "User": {
+      "title": "User",
+      "description": "System user account for authentication and role management",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 64 },
+        "identifierNumber": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "AssessmentSeries": {
+      "title": "AssessmentSeries",
+      "description": "CDACC / TVET assessment exam series",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "seriesMonth": { "type": "string", "maxLength": 32 },
+        "seriesYear": { "type": "integer" },
+        "isActive": { "type": "boolean" },
+        "deadlineDate": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "name", "seriesMonth", "seriesYear"]
+    },
+    "Trainer": {
+      "title": "Trainer",
+      "description": "Trainer details for verifying unit competencies",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "staffNumber": { "type": "string", "maxLength": 64 },
+        "departmentId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "name", "email", "staffNumber"]
+    },
+    "Unit": {
+      "title": "Unit",
+      "description": "Course unit / module of competency",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 128 },
+        "courseId": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "code", "name"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System notification for clearance and registration alerts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "message": { "type": "string", "maxLength": 512 },
+        "type": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "title", "message"]
+    },
+    "InstitutionConfig": {
+      "title": "InstitutionConfig",
+      "description": "Settings and naming configuration for the institution",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "institutionName": { "type": "string", "maxLength": 128 },
+        "subTitle": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "institutionName"]
+    }
+  },
+  "firestore": {
+    "/registrations/{registrationId}": {
+      "schema": "Registration",
+      "description": "Candidate registration submissions and clearances"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Student registry records"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User accounts and permissions"
+    },
+    "/trainers/{trainerId}": {
+      "schema": "Trainer",
+      "description": "Trainer profiles and assigned departments"
+    },
+    "/units/{unitId}": {
+      "schema": "Unit",
+      "description": "Units of competency"
+    },
+    "/series/{seriesId}": {
+      "schema": "AssessmentSeries",
+      "description": "Exam and assessment series"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Clearance and assessment notifications"
+    },
+    "/institution_config/{configId}": {
+      "schema": "InstitutionConfig",
+      "description": "Institutional configuration"
+    }
+  }
+}
