@@ -117,13 +117,13 @@ export const OfficialFormPrintView: React.FC<OfficialFormPrintViewProps> = ({
     doc.text(config.departmentName || 'DEPARTMENT OF COMPUTING AND INFORMATICS', pageWidth / 2, 44.5, { align: 'center' });
 
     doc.setFont('times', 'bold');
-    doc.setFontSize(11);
-    doc.text('TSNP/CDACC ASSESSMENT UNIT REGISTRATION FORM', pageWidth / 2, 52, { align: 'center' });
+    doc.setFontSize(10.5);
+    doc.text('TSNP/CDACC ASSESSMENT UNIT REGISTRATION FORM', pageWidth / 2, 50.5, { align: 'center' });
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setTextColor(70, 70, 70);
-    doc.text(`Registration Ref: ${registration.registrationReference}`, pageWidth - 14, 52, { align: 'right' });
+    doc.text(`Registration Ref: ${registration.registrationReference}`, pageWidth - 14, 54, { align: 'right' });
 
     // 4. Candidate Particulars Grid Box
     doc.setDrawColor(100, 116, 139);
@@ -197,15 +197,33 @@ export const OfficialFormPrintView: React.FC<OfficialFormPrintViewProps> = ({
           {
             content: 'TOTAL AMOUNT PAYABLE:',
             colSpan: 4,
-            styles: { halign: 'right', fontStyle: 'bold', fontSize: 8.5 },
+            styles: {
+              halign: 'right',
+              fontStyle: 'bold',
+              fontSize: 8.5,
+              fillColor: [248, 250, 252],
+              textColor: [15, 23, 42],
+            },
           },
           {
             content: `${config.defaultCurrency || 'KES'} ${registration.totalAmount.toLocaleString()}`,
-            styles: { halign: 'right', fontStyle: 'bold', fontSize: 8.5 },
+            styles: {
+              halign: 'right',
+              fontStyle: 'bold',
+              fontSize: 8.5,
+              fillColor: [248, 250, 252],
+              textColor: [15, 23, 42],
+            },
           },
           {
             content: `${registration.units.filter((u) => u.status === 'APPROVED').length} of ${registration.units.length} Units Approved`,
-            styles: { halign: 'center', fontSize: 7.5 },
+            styles: {
+              halign: 'center',
+              fontSize: 7.5,
+              fontStyle: 'normal',
+              fillColor: [248, 250, 252],
+              textColor: [15, 23, 42],
+            },
           },
         ],
       ],
@@ -224,6 +242,13 @@ export const OfficialFormPrintView: React.FC<OfficialFormPrintViewProps> = ({
         fontStyle: 'bold',
         halign: 'left',
         lineWidth: 0.2,
+      },
+      footStyles: {
+        fillColor: [248, 250, 252],
+        textColor: [15, 23, 42],
+        fontStyle: 'bold',
+        lineWidth: 0.15,
+        lineColor: [30, 41, 59],
       },
       columnStyles: {
         0: { cellWidth: 10, halign: 'center' },
