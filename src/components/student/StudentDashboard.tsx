@@ -63,11 +63,35 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [correctionModalReg, setCorrectionModalReg] = useState<Registration | null>(null);
   const [removeConfirmUnit, setRemoveConfirmUnit] = useState<{ reg: Registration; unitId: string; unitName: string } | null>(null);
 
-  const studentRegistrations = registrations.filter(
-    (r) => r.studentId === student.id || r.admissionNumber === student.admissionNumber
-  );
+  const studentAdm = student?.admissionNumber?.trim().toUpperCase();
+  const userAdm = user?.identifierNumber?.trim().toUpperCase();
+  const userName = user?.name?.trim().toLowerCase();
+  const studentName = student?.name?.trim().toLowerCase();
 
-  const activeRegistration = studentRegistrations[0] || null;
+  const studentRegistrations = registrations
+    .filter((r) => {
+      const regAdm = r.admissionNumber?.trim().toUpperCase();
+      const regStudentId = r.studentId;
+      const regName = r.studentName?.trim().toLowerCase();
+
+      const matchId = Boolean(student?.id && regStudentId === student.id);
+      const matchUserId = Boolean(user?.id && (regStudentId === user.id || (r as any).userId === user.id));
+      const matchAdm = Boolean((studentAdm && regAdm === studentAdm) || (userAdm && regAdm === userAdm));
+      const matchName = Boolean((userName && regName === userName) || (studentName && regName === studentName));
+
+      return matchId || matchUserId || matchAdm || matchName;
+    })
+    .sort((a, b) => {
+      const timeA = new Date(a.submittedAt || a.lastUpdatedAt || 0).getTime();
+      const timeB = new Date(b.submittedAt || b.lastUpdatedAt || 0).getTime();
+      return timeB - timeA;
+    });
+
+  const activeSeriesObj = assessmentSeriesList.find((s) => s.status === 'ACTIVE');
+  const activeRegistration =
+    (activeSeriesObj && studentRegistrations.find((r) => r.assessmentSeriesId === activeSeriesObj.id)) ||
+    studentRegistrations[0] ||
+    null;
   const course = courses.find((c) => c.id === student.courseId);
   const level = levels.find((l) => l.id === student.levelId);
 
@@ -282,6 +306,39 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Approved Registration Hero Callout */}
+      {activeRegistration &&
+        (activeRegistration.status === 'APPROVED' || activeRegistration.status === 'RECEIVED_BY_EXAMINATIONS') && (
+          <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-900 border-2 border-emerald-500/60 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/40 flex items-center justify-center shrink-0 shadow-inner">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm sm:text-base font-bold text-white">
+                    Clearance Completed & Approved!
+                  </h2>
+                  <span className="bg-emerald-500/20 text-emerald-300 text-[11px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/40">
+                    Ready for Download
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  Your CDACC/TSNP assessment units have been verified by trainers and approved by HOD {config.departmentName}.
+                  You can download your official signed registration form ({config.formReference || 'TSNP/CDACC/EXAM/REG/01'}) below.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setSelectedForPrint(activeRegistration)}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs sm:text-sm rounded-xl shadow-xl shadow-emerald-950/60 transition shrink-0 cursor-pointer"
+            >
+              <Printer className="w-4 h-4" /> Download Approved Form PDF
+            </button>
+          </div>
+        )}
 
       {/* Active Registration Card */}
       {activeRegistration ? (

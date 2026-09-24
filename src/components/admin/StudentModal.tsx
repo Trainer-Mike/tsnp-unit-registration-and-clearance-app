@@ -239,10 +239,11 @@ export const StudentModal: React.FC<StudentModalProps> = ({
                   const newLvlId = e.target.value;
                   const lvl = levels.find((l) => l.id === newLvlId);
                   const maxM = getMaxModulesForLevel(lvl?.code || lvl?.name, newLvlId);
+                  const validModule = String(Math.min(Number(formData.currentModule) || 1, maxM)) as AcademicModule;
                   setFormData({
                     ...formData,
                     levelId: newLvlId,
-                    currentModule: Math.min(formData.currentModule || 1, maxM),
+                    currentModule: validModule,
                   });
                 }}
                 className="w-full p-2.5 bg-slate-950 border border-slate-700 text-white rounded-xl focus:ring-2 focus:ring-emerald-500"

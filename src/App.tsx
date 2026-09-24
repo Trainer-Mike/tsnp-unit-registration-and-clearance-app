@@ -103,10 +103,49 @@ export default function App() {
     }
   };
 
-  // Find linked student or trainer profiles
-  const currentStudent = students.find(
-    (s) => s.userId === currentUser.id || s.admissionNumber === currentUser.identifierNumber
-  ) || students[0];
+  // Find linked student profile safely with robust case-insensitive and email/admission matching
+  const cleanUserAdm = currentUser?.identifierNumber?.trim().toUpperCase();
+  const cleanUserEmail = currentUser?.email?.trim().toLowerCase();
+  const cleanUserName = currentUser?.name?.trim().toLowerCase();
+
+  const matchedStudent = students.find((s) => {
+    if (!currentUser) return false;
+    const matchUserId = Boolean(s.userId && s.userId === currentUser.id);
+    const matchAdm = Boolean(
+      cleanUserAdm &&
+      s.admissionNumber &&
+      s.admissionNumber.trim().toUpperCase() === cleanUserAdm
+    );
+    const matchEmail = Boolean(
+      cleanUserEmail &&
+      s.email &&
+      s.email.trim().toLowerCase() === cleanUserEmail
+    );
+    const matchName = Boolean(
+      cleanUserName &&
+      s.name &&
+      s.name.trim().toLowerCase() === cleanUserName
+    );
+    return matchUserId || matchAdm || matchEmail || matchName;
+  });
+
+  const currentStudent: Student =
+    matchedStudent ||
+    (currentUser?.role === 'STUDENT'
+      ? {
+          id: `stu-${currentUser.id}`,
+          userId: currentUser.id,
+          name: currentUser.name,
+          admissionNumber: currentUser.identifierNumber || 'N/A',
+          email: currentUser.email,
+          phone: currentUser.phone || '',
+          courseId: courses[0]?.id || 'course-dict',
+          levelId: levels[0]?.id || 'lvl-6',
+          departmentId: currentUser.departmentId || 'dept-ci',
+          currentModule: 1,
+          status: 'ACTIVE' as const,
+        }
+      : students[0]);
 
   const currentTrainer =
     trainers.find(

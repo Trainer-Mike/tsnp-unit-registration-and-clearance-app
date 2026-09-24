@@ -117,7 +117,7 @@ export const PendingVerificationMonitor: React.FC<PendingVerificationMonitorProp
             admissionNumber: reg.admissionNumber,
             courseName: reg.courseName,
             module: String(reg.module || '1'),
-            seriesName: reg.seriesName,
+            seriesName: reg.assessmentSeriesName || (reg as any).seriesName || 'Current Series',
             submittedAt: reg.submittedAt,
             unitItemId: u.id,
             unitCode: u.unitCode,

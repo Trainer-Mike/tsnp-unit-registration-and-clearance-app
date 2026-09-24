@@ -84,28 +84,22 @@ export class StorageService {
     dataSource: 'initializing',
   };
 
-  // Session-Aware Storage Helpers (sessionStorage vs localStorage strictly for authentication)
+  // Session-Aware Storage Helpers: strictly sessionStorage so closing tab closes session
   private static getSessionValue(key: string): string | null {
     if (typeof window === 'undefined') return null;
     try {
-      const sessionVal = sessionStorage.getItem(key);
-      if (sessionVal !== null) return sessionVal;
-      return localStorage.getItem(key);
+      return sessionStorage.getItem(key);
     } catch {
       return null;
     }
   }
 
-  private static setSessionValue(key: string, value: string, persistent: boolean = false): void {
+  private static setSessionValue(key: string, value: string, _persistent: boolean = false): void {
     if (typeof window === 'undefined') return;
     try {
-      if (persistent) {
-        localStorage.setItem(key, value);
-        sessionStorage.removeItem(key);
-      } else {
-        sessionStorage.setItem(key, value);
-        localStorage.removeItem(key);
-      }
+      sessionStorage.setItem(key, value);
+      // Strictly remove from localStorage so closed tabs require logging in again
+      localStorage.removeItem(key);
       triggerStoreUpdate();
     } catch (e) {
       console.error('Session storage write error', e);
@@ -130,20 +124,19 @@ export class StorageService {
   public static async init(): Promise<void> {
     if (typeof window === 'undefined') return;
 
-    // Remove legacy institutional records from localStorage to ensure Neon is single source of truth
+    // Purge any legacy authentication from localStorage so closing tab requires fresh login
+    try {
+      localStorage.removeItem(SESSION_KEYS.IS_LOGGED_IN);
+      localStorage.removeItem(SESSION_KEYS.CURRENT_USER_ID);
+      localStorage.removeItem(SESSION_KEYS.REMEMBER_ME);
+    } catch {}
+
+    // Remove legacy institutional records from localStorage to ensure PostgreSQL is single source of truth
     try {
       LEGACY_INSTITUTIONAL_KEYS.forEach((key) => {
         localStorage.removeItem(key);
       });
     } catch {}
-
-    // Clean up persistent login if remember-me was not selected
-    const isLegacyPersistent = localStorage.getItem(SESSION_KEYS.IS_LOGGED_IN);
-    const sessionActive = sessionStorage.getItem(SESSION_KEYS.IS_LOGGED_IN);
-    if (isLegacyPersistent === 'true' && !sessionActive && localStorage.getItem(SESSION_KEYS.REMEMBER_ME) !== 'true') {
-      localStorage.removeItem(SESSION_KEYS.IS_LOGGED_IN);
-      localStorage.removeItem(SESSION_KEYS.CURRENT_USER_ID);
-    }
 
     // Perform initial fetch from Neon PostgreSQL backend
     await this.syncWithBackend();

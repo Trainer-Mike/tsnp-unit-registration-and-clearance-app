@@ -6,7 +6,7 @@ var __export = (target, all) => {
 
 // server.ts
 import express from "express";
-import path from "path";
+import path2 from "path";
 import dotenv from "dotenv";
 
 // src/db/index.ts
@@ -1258,6 +1258,16 @@ var INITIAL_NOTIFICATIONS = [
     read: false,
     createdAt: "2026-06-13T16:20:00Z",
     linkRegistrationId: "reg-003"
+  },
+  {
+    id: "notif-admin-01",
+    targetRole: "ADMIN",
+    title: "Trainee Submission: Pending Trainer Verification",
+    message: "Brenda kavere musoga (L5ICT/13903/24M) submitted 2 unit(s) for Cycle 1. Pending verification by: Douglas Omutanyi (2 units: IT/OS/ICT/CR/1/5, IT/OS/ICT/CR/4/5).",
+    type: "INFO",
+    read: false,
+    createdAt: "2026-09-04T05:30:00Z",
+    linkRegistrationId: "reg-d0x868rcq"
   }
 ];
 
@@ -1266,6 +1276,22 @@ var dbInstance = null;
 var clientInstance = null;
 var currentConnUrl = null;
 var schemaInitialized = false;
+var quotaCooldownUntil = 0;
+function isNeonQuotaError(err) {
+  if (!err) return false;
+  const msg = (err.message || String(err)).toLowerCase();
+  const code = String(err.code || "");
+  return code === "53000" || msg.includes("exceeded the data transfer quota") || msg.includes("data transfer quota") || msg.includes("network transfer allowance") || msg.includes("limit reached") || msg.includes("monthly network transfer");
+}
+function markNeonQuotaExceeded() {
+  quotaCooldownUntil = Date.now() + 45e3;
+}
+function clearNeonQuotaExceeded() {
+  quotaCooldownUntil = 0;
+}
+function isNeonInQuotaCooldown() {
+  return Date.now() < quotaCooldownUntil;
+}
 function parseConnectionString(rawInput) {
   if (!rawInput) return null;
   let str = rawInput.trim();
@@ -1317,7 +1343,30 @@ function getConnectionString() {
   }
   return null;
 }
-function getDb() {
+function detectProvider(host) {
+  if (!host) return "PostgreSQL";
+  const lower = host.toLowerCase();
+  if (lower.includes("cockroachlabs.cloud") || lower.includes("cockroach")) {
+    return "CockroachDB Serverless";
+  }
+  if (lower.includes("supabase.co") || lower.includes("supabase.com") || lower.includes("pooler.supabase.com")) {
+    return "Supabase PostgreSQL";
+  }
+  if (lower.includes("neon.tech")) {
+    return "Neon PostgreSQL";
+  }
+  if (lower.includes("rds.amazonaws.com")) {
+    return "AWS RDS PostgreSQL";
+  }
+  if (lower.includes("render.com")) {
+    return "Render PostgreSQL";
+  }
+  return "PostgreSQL";
+}
+function getDb(ignoreCooldown = false) {
+  if (!ignoreCooldown && isNeonInQuotaCooldown()) {
+    return null;
+  }
   const conn = getConnectionString();
   if (!conn) {
     if (clientInstance) {
@@ -1349,19 +1398,24 @@ function getDb() {
       if (!parsedUrl.hostname) {
         return null;
       }
-      const isNeon = parsedUrl.hostname.includes("neon.tech") || connectionString.includes("sslmode=require");
+      const isLocal = parsedUrl.hostname === "localhost" || parsedUrl.hostname === "127.0.0.1";
+      const disableSsl = connectionString.includes("sslmode=disable");
+      const ssl = disableSsl ? false : isLocal ? false : "require";
       clientInstance = postgres(connectionString, {
-        ssl: isNeon ? "require" : false,
+        ssl,
         max: 10,
         idle_timeout: 20,
         connect_timeout: 10,
         prepare: false
-        // Recommended for serverless environments (Neon/Vercel)
+        // Recommended for serverless environments (Supabase/Neon/Vercel)
       });
       dbInstance = drizzle(clientInstance, { schema: schema_exports });
       currentConnUrl = connectionString;
     } catch (err) {
       console.warn("PostgreSQL database connection initialized with warning or invalid URL:", err);
+      if (isNeonQuotaError(err)) {
+        markNeonQuotaExceeded();
+      }
       dbInstance = null;
       clientInstance = null;
       currentConnUrl = null;
@@ -1370,21 +1424,24 @@ function getDb() {
   }
   return dbInstance;
 }
-async function testDbConnection() {
+async function testDbConnection(force = false) {
+  if (force) {
+    clearNeonQuotaExceeded();
+  }
   const conn = getConnectionString();
   if (!conn) {
     const rawVal = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_DATABASE_URL;
     if (rawVal) {
       return {
         connected: false,
-        source: "Neon PostgreSQL",
+        source: "PostgreSQL",
         message: `Database variable found (${rawVal.slice(0, 32)}...), but it could not be parsed into a valid postgresql:// URI. Please check formatting.`
       };
     }
     return {
       connected: false,
-      source: "Neon PostgreSQL",
-      message: "DATABASE_URL environment variable is not configured. Add your real Neon connection string in Google AI Studio Settings or Vercel Environment Variables."
+      source: "PostgreSQL",
+      message: "DATABASE_URL environment variable is not configured. Add your Supabase or Neon connection string in Google AI Studio Settings."
     };
   }
   let host = "unknown";
@@ -1393,21 +1450,32 @@ async function testDbConnection() {
     host = parsed.hostname;
   } catch {
   }
+  const provider = detectProvider(host);
   if (isPlaceholderConnectionString(conn.url)) {
     return {
       connected: false,
-      source: "Neon PostgreSQL",
+      source: provider,
       variableUsed: conn.sourceVar,
       host,
       isPlaceholder: true,
-      message: `DATABASE_URL is currently using the example placeholder ("${host}" with sample credentials). To connect your real Neon database, replace this with your actual connection string from https://console.neon.tech.`
+      message: `DATABASE_URL is currently using an example placeholder ("${host}"). Replace this with your actual connection string from your Supabase or Neon dashboard.`
     };
   }
-  const db = getDb();
+  if (!force && isNeonInQuotaCooldown()) {
+    return {
+      connected: false,
+      source: provider,
+      variableUsed: conn.sourceVar,
+      host,
+      isQuotaExceeded: true,
+      message: `Neon Data Transfer Quota Exceeded (Error 53000): You have used all of your monthly network transfer allowance for this project on ${host}. Your database and records remain safe.`
+    };
+  }
+  const db = getDb(true);
   if (!db) {
     return {
       connected: false,
-      source: "Neon PostgreSQL",
+      source: provider,
       variableUsed: conn.sourceVar,
       host,
       message: `Database URL in ${conn.sourceVar} could not establish a connection to ${host}.`
@@ -1424,28 +1492,41 @@ async function testDbConnection() {
       sql`SELECT COUNT(*)::int as count FROM information_schema.tables WHERE table_schema = 'public'`
     );
     const tablesCount = tablesRes[0]?.count || tablesRes.rows?.[0]?.count || 0;
+    clearNeonQuotaExceeded();
     return {
       connected: true,
-      source: "Neon PostgreSQL",
+      source: provider,
       variableUsed: conn.sourceVar,
       host,
-      databaseName: row.db_name || "neondb",
+      databaseName: row.db_name || "postgres",
       serverTime: row.current_time ? new Date(row.current_time).toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
       latencyMs,
       tablesCount,
-      message: `Successfully connected to Neon PostgreSQL (${row.db_name || "neondb"} on ${host}). Latency: ${latencyMs}ms.`
+      message: `Successfully connected to ${provider} (${row.db_name || "postgres"} on ${host}). Latency: ${latencyMs}ms.`
     };
   } catch (err) {
+    if (isNeonQuotaError(err)) {
+      markNeonQuotaExceeded();
+      return {
+        connected: false,
+        source: provider,
+        variableUsed: conn.sourceVar,
+        host,
+        isQuotaExceeded: true,
+        message: `Data Transfer Quota Exceeded (Error 53000) on ${host}. Records remain safe.`
+      };
+    }
     return {
       connected: false,
-      source: "Neon PostgreSQL",
+      source: provider,
       variableUsed: conn.sourceVar,
       host,
-      message: `Neon query failed on ${host}: ${err?.message || String(err)}`
+      message: `${provider} query failed on ${host}: ${err?.message || String(err)}`
     };
   }
 }
 async function ensureSchemaAndSeed() {
+  if (isNeonInQuotaCooldown()) return;
   const db = getDb();
   if (!db || schemaInitialized) return;
   try {
@@ -1612,6 +1693,27 @@ async function ensureSchemaAndSeed() {
         ip_address TEXT
       );
     `);
+    try {
+      await db.execute(sql`
+        DO $$
+        BEGIN
+          BEGIN
+            ALTER TABLE registrations ALTER COLUMN module TYPE TEXT USING module::text;
+          EXCEPTION WHEN OTHERS THEN NULL;
+          END;
+          BEGIN
+            ALTER TABLE students ALTER COLUMN current_module TYPE TEXT USING current_module::text;
+          EXCEPTION WHEN OTHERS THEN NULL;
+          END;
+          BEGIN
+            ALTER TABLE students ALTER COLUMN current_year_of_study TYPE TEXT USING current_year_of_study::text;
+          EXCEPTION WHEN OTHERS THEN NULL;
+          END;
+        END $$;
+      `);
+    } catch (migErr) {
+      console.warn("Column migration note:", migErr);
+    }
     const userCountRes = await db.execute(sql`SELECT COUNT(*)::int as count FROM users`);
     const count = userCountRes[0]?.count || userCountRes.rows?.[0]?.count || 0;
     if (count === 0) {
@@ -1675,10 +1777,227 @@ async function ensureSchemaAndSeed() {
   }
 }
 
+// src/server/firestoreStorage.ts
+import { initializeApp, getApps, getApp } from "firebase/app";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  getDocs,
+  deleteDoc,
+  writeBatch
+} from "firebase/firestore";
+import fs from "fs";
+import path from "path";
+var firestoreInstance = null;
+var firestoreInitialized = false;
+function getFirestoreDb() {
+  if (firestoreInstance) return firestoreInstance;
+  try {
+    const configPath = path.resolve(process.cwd(), "firebase-applet-config.json");
+    if (!fs.existsSync(configPath)) {
+      return null;
+    }
+    const raw = fs.readFileSync(configPath, "utf8");
+    const config = JSON.parse(raw);
+    if (!config.projectId || !config.firestoreDatabaseId) {
+      return null;
+    }
+    const app2 = getApps().length === 0 ? initializeApp(config) : getApp();
+    firestoreInstance = getFirestore(app2, config.firestoreDatabaseId);
+    return firestoreInstance;
+  } catch (err) {
+    console.warn("Firestore initialization error:", err);
+    return null;
+  }
+}
+async function testFirestoreConnection() {
+  const db = getFirestoreDb();
+  if (!db) {
+    return {
+      connected: false,
+      message: "Firestore configuration not found or invalid in firebase-applet-config.json"
+    };
+  }
+  try {
+    const testDocRef = doc(db, "institution_config", "default_config");
+    const snap = await getDoc(testDocRef);
+    const dbId = db._databaseId?.database || db.databaseId || "(default)";
+    return {
+      connected: true,
+      databaseId: dbId,
+      projectId: db.app.options.projectId,
+      message: `Successfully connected to Google Cloud Firestore (${dbId}).`
+    };
+  } catch (err) {
+    const dbId = db._databaseId?.database || db.databaseId || "(default)";
+    return {
+      connected: false,
+      databaseId: dbId,
+      projectId: db.app.options.projectId,
+      message: `Firestore connection error: ${err?.message || String(err)}`
+    };
+  }
+}
+var FirestoreStorageService = class _FirestoreStorageService {
+  static getInstance() {
+    if (!_FirestoreStorageService.instance) {
+      _FirestoreStorageService.instance = new _FirestoreStorageService();
+    }
+    return _FirestoreStorageService.instance;
+  }
+  // --- Seed Initial Data to Firestore if Empty ---
+  async ensureFirestoreSeeded(initialData) {
+    const db = getFirestoreDb();
+    if (!db || firestoreInitialized) return;
+    try {
+      const cfgRef = doc(db, "institution_config", "default_config");
+      const cfgSnap = await getDoc(cfgRef);
+      if (!cfgSnap.exists()) {
+        console.log("\u26A1 Seeding initial institutional data into Google Cloud Firestore...");
+        await setDoc(cfgRef, { data: initialData.config, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
+        const batch = writeBatch(db);
+        for (const dep of initialData.departments) {
+          batch.set(doc(db, "departments", dep.id), dep);
+        }
+        for (const lvl of initialData.levels) {
+          batch.set(doc(db, "levels", lvl.id), lvl);
+        }
+        for (const crs of initialData.courses) {
+          batch.set(doc(db, "courses", crs.id), crs);
+        }
+        for (const trn of initialData.trainers) {
+          batch.set(doc(db, "trainers", trn.id), trn);
+        }
+        for (const unt of initialData.units) {
+          batch.set(doc(db, "units", unt.id), unt);
+        }
+        for (const cat of initialData.categories) {
+          batch.set(doc(db, "unit_categories", cat.id), cat);
+        }
+        for (const ser of initialData.series) {
+          batch.set(doc(db, "series", ser.id), ser);
+        }
+        for (const usr of initialData.users) {
+          batch.set(doc(db, "users", usr.id), usr);
+        }
+        for (const stu of initialData.students) {
+          batch.set(doc(db, "students", stu.id), stu);
+        }
+        for (const reg of initialData.registrations) {
+          batch.set(doc(db, "registrations", reg.id), reg);
+        }
+        for (const not of initialData.notifications) {
+          batch.set(doc(db, "notifications", not.id), not);
+        }
+        await batch.commit();
+        console.log("\u2705 Baseline institutional data successfully seeded into Google Cloud Firestore!");
+      }
+      firestoreInitialized = true;
+    } catch (err) {
+      console.warn("Firestore seeding check error:", err);
+    }
+  }
+  // --- Load Full State from Firestore ---
+  async loadAllData() {
+    const db = getFirestoreDb();
+    if (!db) return null;
+    try {
+      const [
+        cfgSnap,
+        depsSnap,
+        lvlsSnap,
+        crssSnap,
+        trnsSnap,
+        stusSnap,
+        untsSnap,
+        catsSnap,
+        sersSnap,
+        usrsSnap,
+        regsSnap,
+        notsSnap,
+        logsSnap
+      ] = await Promise.all([
+        getDoc(doc(db, "institution_config", "default_config")),
+        getDocs(collection(db, "departments")),
+        getDocs(collection(db, "levels")),
+        getDocs(collection(db, "courses")),
+        getDocs(collection(db, "trainers")),
+        getDocs(collection(db, "students")),
+        getDocs(collection(db, "units")),
+        getDocs(collection(db, "unit_categories")),
+        getDocs(collection(db, "series")),
+        getDocs(collection(db, "users")),
+        getDocs(collection(db, "registrations")),
+        getDocs(collection(db, "notifications")),
+        getDocs(collection(db, "audit_logs"))
+      ]);
+      const config = cfgSnap.exists() ? cfgSnap.data().data : void 0;
+      const departments2 = depsSnap.docs.map((d) => d.data());
+      const levels2 = lvlsSnap.docs.map((d) => d.data());
+      const courses2 = crssSnap.docs.map((d) => d.data());
+      const trainers2 = trnsSnap.docs.map((d) => d.data());
+      const students2 = stusSnap.docs.map((d) => d.data());
+      const units2 = untsSnap.docs.map((d) => d.data());
+      const categories = catsSnap.docs.map((d) => d.data());
+      const series = sersSnap.docs.map((d) => d.data());
+      const users2 = usrsSnap.docs.map((d) => d.data());
+      const registrations2 = regsSnap.docs.map((d) => d.data());
+      const notifications2 = notsSnap.docs.map((d) => d.data());
+      const auditLogs = logsSnap.docs.map((d) => d.data());
+      return {
+        config,
+        departments: departments2,
+        levels: levels2,
+        courses: courses2,
+        trainers: trainers2,
+        students: students2,
+        units: units2,
+        categories,
+        series,
+        users: users2,
+        registrations: registrations2,
+        notifications: notifications2,
+        auditLogs
+      };
+    } catch (err) {
+      console.warn("Error loading all data from Firestore:", err);
+      return null;
+    }
+  }
+  // --- Document Write Helpers ---
+  async saveDocument(collectionName, id, data) {
+    const db = getFirestoreDb();
+    if (!db) return false;
+    try {
+      await setDoc(doc(db, collectionName, id), data, { merge: true });
+      return true;
+    } catch (err) {
+      console.warn(`Firestore save error on ${collectionName}/${id}:`, err);
+      return false;
+    }
+  }
+  async deleteDocument(collectionName, id) {
+    const db = getFirestoreDb();
+    if (!db) return false;
+    try {
+      await deleteDoc(doc(db, collectionName, id));
+      return true;
+    } catch (err) {
+      console.warn(`Firestore delete error on ${collectionName}/${id}:`, err);
+      return false;
+    }
+  }
+};
+var firestoreStorage = FirestoreStorageService.getInstance();
+
 // src/server/serverStorage.ts
 import { eq, desc } from "drizzle-orm";
 var ServerStorageService = class {
   constructor() {
+    this.cachedBootstrap = null;
     this.memoryState = {
       config: INITIAL_INSTITUTION_CONFIG,
       departments: INITIAL_DEPARTMENTS,
@@ -1697,42 +2016,56 @@ var ServerStorageService = class {
       source: "memory_preview"
     };
   }
-  // --- Bootstrap Data: Neon PostgreSQL is the Single Source of Truth ---
-  async getBootstrapData() {
+  invalidateCache() {
+    this.cachedBootstrap = null;
+  }
+  async getMetricsSummary() {
+    if (this.cachedBootstrap) {
+      return {
+        registeredStudentsCount: this.cachedBootstrap.data.students.length,
+        registeredCandidatesCount: this.cachedBootstrap.data.registrations.length,
+        activeSeriesCount: this.cachedBootstrap.data.series.filter((s) => s.status === "ACTIVE").length,
+        lastUpdated: this.cachedBootstrap.data.lastUpdated,
+        source: this.cachedBootstrap.data.source
+      };
+    }
+    return {
+      registeredStudentsCount: this.memoryState.students.length,
+      registeredCandidatesCount: this.memoryState.registrations.length,
+      activeSeriesCount: this.memoryState.series.filter((s) => s.status === "ACTIVE").length,
+      lastUpdated: this.memoryState.lastUpdated,
+      source: this.memoryState.source
+    };
+  }
+  handleNeonError(context, err) {
+    console.error(`PostgreSQL error (${context}):`, err?.message || err);
+    if (isNeonQuotaError(err)) {
+      markNeonQuotaExceeded();
+    }
+  }
+  // --- Bootstrap Data: Supabase/Neon PostgreSQL is Primary, Google Cloud Firestore is Seamless Fallback ---
+  async getBootstrapData(forceRefresh = false) {
+    if (!forceRefresh && this.cachedBootstrap && Date.now() - this.cachedBootstrap.timestamp < 15e3) {
+      return this.cachedBootstrap.data;
+    }
     const db = getDb();
     if (db) {
       try {
         await ensureSchemaAndSeed();
-        const [
-          depList,
-          lvlList,
-          crsList,
-          trnList,
-          untList,
-          catList,
-          serList,
-          usrList,
-          stuList,
-          regList,
-          notList,
-          cfgList,
-          logList
-        ] = await Promise.all([
-          db.select().from(departments),
-          db.select().from(levels),
-          db.select().from(courses),
-          db.select().from(trainers),
-          db.select().from(units),
-          db.select().from(unitCategories),
-          db.select().from(assessmentSeries),
-          db.select().from(users),
-          db.select().from(students),
-          db.select().from(registrations).orderBy(desc(registrations.submittedAt)),
-          db.select().from(notifications).orderBy(desc(notifications.createdAt)),
-          db.select().from(institutionConfig).limit(1),
-          db.select().from(auditLogsGlobal).orderBy(desc(auditLogsGlobal.timestamp)).limit(200)
-        ]);
-        return {
+        const depList = await db.select().from(departments);
+        const lvlList = await db.select().from(levels);
+        const crsList = await db.select().from(courses);
+        const trnList = await db.select().from(trainers);
+        const untList = await db.select().from(units);
+        const catList = await db.select().from(unitCategories);
+        const serList = await db.select().from(assessmentSeries);
+        const usrList = await db.select().from(users);
+        const stuList = await db.select().from(students);
+        const regList = await db.select().from(registrations).orderBy(desc(registrations.submittedAt));
+        const notList = await db.select().from(notifications).orderBy(desc(notifications.createdAt));
+        const cfgList = await db.select().from(institutionConfig).limit(1);
+        const logList = await db.select().from(auditLogsGlobal).orderBy(desc(auditLogsGlobal.timestamp)).limit(200);
+        const resultState = {
           config: cfgList[0]?.data || INITIAL_INSTITUTION_CONFIG,
           departments: depList || [],
           levels: lvlList || [],
@@ -1747,13 +2080,228 @@ var ServerStorageService = class {
           notifications: notList || [],
           auditLogs: logList || [],
           lastUpdated: (/* @__PURE__ */ new Date()).toISOString(),
-          source: "neon_postgresql"
+          source: (() => {
+            const c = getConnectionString();
+            if (c) {
+              const p = detectProvider(new URL(c.url).hostname).toLowerCase();
+              if (p.includes("supabase")) return "supabase_postgresql";
+              if (p.includes("neon")) return "neon_postgresql";
+              return "postgresql";
+            }
+            return "neon_postgresql";
+          })()
         };
+        this.cachedBootstrap = { data: resultState, timestamp: Date.now() };
+        return resultState;
       } catch (err) {
         console.error("Neon PostgreSQL query error during bootstrap:", err);
+        if (isNeonQuotaError(err)) {
+          markNeonQuotaExceeded();
+        }
       }
     }
+    try {
+      const fsData = await firestoreStorage.loadAllData();
+      if (fsData && (fsData.departments.length > 0 || fsData.users.length > 0 || fsData.registrations.length > 0)) {
+        this.memoryState = {
+          config: fsData.config || this.memoryState.config,
+          departments: fsData.departments.length ? fsData.departments : this.memoryState.departments,
+          levels: fsData.levels.length ? fsData.levels : this.memoryState.levels,
+          courses: fsData.courses.length ? fsData.courses : this.memoryState.courses,
+          trainers: fsData.trainers.length ? fsData.trainers : this.memoryState.trainers,
+          units: fsData.units.length ? fsData.units : this.memoryState.units,
+          unitCategories: fsData.categories.length ? fsData.categories : this.memoryState.unitCategories,
+          series: fsData.series.length ? fsData.series : this.memoryState.series,
+          users: fsData.users.length ? fsData.users : this.memoryState.users,
+          students: fsData.students.length ? fsData.students : this.memoryState.students,
+          registrations: fsData.registrations.length ? fsData.registrations : this.memoryState.registrations,
+          notifications: fsData.notifications.length ? fsData.notifications : this.memoryState.notifications,
+          auditLogs: fsData.auditLogs.length ? fsData.auditLogs : this.memoryState.auditLogs,
+          lastUpdated: (/* @__PURE__ */ new Date()).toISOString(),
+          source: "google_firestore"
+        };
+        return this.memoryState;
+      } else {
+        firestoreStorage.ensureFirestoreSeeded({
+          config: this.memoryState.config,
+          departments: this.memoryState.departments,
+          levels: this.memoryState.levels,
+          courses: this.memoryState.courses,
+          trainers: this.memoryState.trainers,
+          students: this.memoryState.students,
+          units: this.memoryState.units,
+          categories: this.memoryState.unitCategories,
+          series: this.memoryState.series,
+          users: this.memoryState.users,
+          registrations: this.memoryState.registrations,
+          notifications: this.memoryState.notifications
+        }).catch((e) => console.warn("Background Firestore seed warning:", e));
+      }
+    } catch (fsErr) {
+      console.warn("Firestore fallback check error:", fsErr);
+    }
     return this.memoryState;
+  }
+  // --- Restore / Sync Saved Data from Google Cloud Firestore into PostgreSQL (Supabase) ---
+  async syncFromFirestoreToPostgres() {
+    const db = getDb();
+    if (!db) {
+      throw new Error("PostgreSQL database (Supabase) is not connected.");
+    }
+    const fsData = await firestoreStorage.loadAllData();
+    if (!fsData) {
+      throw new Error("Could not read from Google Cloud Firestore.");
+    }
+    for (const u of fsData.users) {
+      await db.insert(users).values({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone,
+        role: u.role,
+        identifierNumber: u.identifierNumber,
+        departmentId: u.departmentId,
+        avatarUrl: u.avatarUrl || null,
+        signatureDataUrl: u.signatureDataUrl || null,
+        title: u.title || null,
+        password: u.password || null
+      }).onConflictDoUpdate({
+        target: users.id,
+        set: {
+          name: u.name,
+          email: u.email,
+          phone: u.phone,
+          role: u.role,
+          identifierNumber: u.identifierNumber,
+          departmentId: u.departmentId,
+          avatarUrl: u.avatarUrl || null,
+          signatureDataUrl: u.signatureDataUrl || null,
+          title: u.title || null,
+          password: u.password || null
+        }
+      });
+    }
+    for (const s of fsData.students) {
+      await db.insert(students).values({
+        id: s.id,
+        userId: s.userId,
+        admissionNumber: s.admissionNumber,
+        name: s.name,
+        email: s.email,
+        phone: s.phone,
+        courseId: s.courseId,
+        levelId: s.levelId,
+        departmentId: s.departmentId,
+        nationalId: s.nationalId || null,
+        currentModule: String(s.currentModule || "1"),
+        currentYearOfStudy: String(s.currentYearOfStudy || "1"),
+        status: s.status || "ACTIVE"
+      }).onConflictDoUpdate({
+        target: students.id,
+        set: {
+          userId: s.userId,
+          admissionNumber: s.admissionNumber,
+          name: s.name,
+          email: s.email,
+          phone: s.phone,
+          courseId: s.courseId,
+          levelId: s.levelId,
+          departmentId: s.departmentId,
+          nationalId: s.nationalId || null,
+          currentModule: String(s.currentModule || "1"),
+          currentYearOfStudy: String(s.currentYearOfStudy || "1"),
+          status: s.status || "ACTIVE"
+        }
+      });
+    }
+    for (const r of fsData.registrations) {
+      await db.insert(registrations).values({
+        id: r.id,
+        registrationReference: r.registrationReference,
+        studentId: r.studentId,
+        studentName: r.studentName,
+        admissionNumber: r.admissionNumber,
+        courseId: r.courseId,
+        courseName: r.courseName,
+        courseCode: r.courseCode,
+        levelId: r.levelId,
+        levelName: r.levelName,
+        departmentId: r.departmentId,
+        departmentName: r.departmentName,
+        assessmentSeriesId: r.assessmentSeriesId,
+        assessmentSeriesName: r.assessmentSeriesName,
+        year: r.year,
+        module: r.module ? String(r.module) : null,
+        units: r.units,
+        totalAmount: r.totalAmount,
+        status: r.status,
+        submittedAt: r.submittedAt,
+        lastUpdatedAt: r.lastUpdatedAt || r.submittedAt,
+        hodApproval: r.hodApproval,
+        examOfficeReceipt: r.examOfficeReceipt,
+        rejectionReason: r.rejectionReason || null,
+        correctionComment: r.correctionComment || null,
+        resubmissionCount: r.resubmissionCount || 0,
+        auditLogs: r.auditLogs
+      }).onConflictDoUpdate({
+        target: registrations.id,
+        set: {
+          registrationReference: r.registrationReference,
+          studentId: r.studentId,
+          studentName: r.studentName,
+          admissionNumber: r.admissionNumber,
+          courseId: r.courseId,
+          courseName: r.courseName,
+          courseCode: r.courseCode,
+          levelId: r.levelId,
+          levelName: r.levelName,
+          departmentId: r.departmentId,
+          departmentName: r.departmentName,
+          assessmentSeriesId: r.assessmentSeriesId,
+          assessmentSeriesName: r.assessmentSeriesName,
+          year: r.year,
+          module: r.module ? String(r.module) : null,
+          units: r.units,
+          totalAmount: r.totalAmount,
+          status: r.status,
+          submittedAt: r.submittedAt,
+          lastUpdatedAt: r.lastUpdatedAt || r.submittedAt,
+          hodApproval: r.hodApproval,
+          examOfficeReceipt: r.examOfficeReceipt,
+          rejectionReason: r.rejectionReason || null,
+          correctionComment: r.correctionComment || null,
+          resubmissionCount: r.resubmissionCount || 0,
+          auditLogs: r.auditLogs
+        }
+      });
+    }
+    for (const n of fsData.notifications) {
+      await db.insert(notifications).values({
+        id: n.id,
+        targetUserId: n.targetUserId || null,
+        targetRole: n.targetRole || null,
+        title: n.title,
+        message: n.message,
+        type: n.type,
+        read: n.read ?? false,
+        createdAt: n.createdAt,
+        linkRegistrationId: n.linkRegistrationId || null
+      }).onConflictDoUpdate({
+        target: notifications.id,
+        set: {
+          read: n.read ?? false
+        }
+      });
+    }
+    this.invalidateCache();
+    return {
+      success: true,
+      usersCount: fsData.users.length,
+      studentsCount: fsData.students.length,
+      registrationsCount: fsData.registrations.length,
+      notificationsCount: fsData.notifications.length,
+      message: `Successfully restored ${fsData.registrations.length} registrations, ${fsData.students.length} students, and ${fsData.users.length} users into Supabase PostgreSQL.`
+    };
   }
   // --- Registrations ---
   async getRegistrations() {
@@ -2457,36 +3005,59 @@ apiRouter.get("/", (req, res) => {
   });
 });
 apiRouter.get("/health", async (req, res) => {
-  const dbHealth = await testDbConnection();
-  const state = await serverStorage.getBootstrapData();
+  const force = req.query.force === "true";
+  const dbHealth = await testDbConnection(force);
+  const firestoreHealth = await testFirestoreConnection();
+  const metrics = await serverStorage.getMetricsSummary();
   return res.json({
-    status: dbHealth.connected ? "ok" : "degraded",
+    status: dbHealth.connected || firestoreHealth.connected ? "ok" : "degraded",
     database: {
-      provider: "Neon PostgreSQL",
+      provider: dbHealth.source || "PostgreSQL",
       connected: dbHealth.connected,
       variableUsed: dbHealth.variableUsed,
       host: dbHealth.host,
       isPlaceholder: dbHealth.isPlaceholder,
+      isQuotaExceeded: dbHealth.isQuotaExceeded,
       message: dbHealth.message,
       latencyMs: dbHealth.latencyMs,
       databaseName: dbHealth.databaseName,
       serverTime: dbHealth.serverTime,
       tablesCount: dbHealth.tablesCount
     },
+    firestore: {
+      provider: "Google Cloud Firestore",
+      connected: firestoreHealth.connected,
+      databaseId: firestoreHealth.databaseId,
+      projectId: firestoreHealth.projectId,
+      message: firestoreHealth.message
+    },
+    storageSource: metrics.source,
     metrics: {
-      registeredStudentsCount: state.students.length,
-      registeredCandidatesCount: state.registrations.length,
-      activeSeriesCount: state.series.filter((s) => s.status === "ACTIVE").length,
-      lastUpdated: state.lastUpdated
+      registeredStudentsCount: metrics.registeredStudentsCount,
+      registeredCandidatesCount: metrics.registeredCandidatesCount,
+      activeSeriesCount: metrics.activeSeriesCount,
+      lastUpdated: metrics.lastUpdated
     }
   });
 });
 apiRouter.get("/db-check", async (req, res) => {
-  const dbHealth = await testDbConnection();
-  return res.status(dbHealth.connected ? 200 : 503).json({
-    success: dbHealth.connected,
-    ...dbHealth
+  const force = req.query.force === "true";
+  const dbHealth = await testDbConnection(force);
+  const firestoreHealth = await testFirestoreConnection();
+  return res.status(200).json({
+    success: dbHealth.connected || firestoreHealth.connected,
+    ...dbHealth,
+    firestore: firestoreHealth
   });
+});
+apiRouter.post("/migrate/restore-saved-data", async (req, res) => {
+  try {
+    const result = await serverStorage.syncFromFirestoreToPostgres();
+    return res.json(result);
+  } catch (err) {
+    console.error("Migration restore error:", err);
+    return res.status(500).json({ success: false, error: err?.message || "Failed to restore data" });
+  }
 });
 apiRouter.get("/bootstrap", async (req, res) => {
   try {
@@ -2841,7 +3412,6 @@ apiRouter.post("/reset", async (req, res) => {
   }
 });
 app.use("/api", apiRouter);
-app.use("/", apiRouter);
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
@@ -2851,10 +3421,10 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const distPath = path2.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      res.sendFile(path2.join(distPath, "index.html"));
     });
   }
   app.listen(PORT, "0.0.0.0", () => {
@@ -2873,8 +3443,10 @@ var server_default = app;
 process.env.VERCEL = process.env.VERCEL || "1";
 function handler(req, res) {
   const originalPath = req.headers?.["x-matched-path"] || req.headers?.["x-vercel-matched-path"] || req.headers?.["x-forwarded-uri"] || req.headers?.["x-original-url"] || req.headers?.["x-rewrite-url"];
-  if (originalPath && typeof originalPath === "string" && originalPath.startsWith("/api") && (!req.url || req.url === "/" || req.url === "/api")) {
+  if (originalPath && typeof originalPath === "string" && originalPath.startsWith("/api")) {
     req.url = originalPath;
+  } else if (req.url && !req.url.startsWith("/api")) {
+    req.url = `/api${req.url.startsWith("/") ? "" : "/"}${req.url}`;
   }
   return server_default(req, res);
 }

@@ -513,6 +513,7 @@ class ServerStorageService {
     if (idx >= 0) this.memoryState.registrations[idx] = fullReg;
     else this.memoryState.registrations.unshift(fullReg);
 
+    this.invalidateCache();
     return fullReg;
   }
 
@@ -529,6 +530,7 @@ class ServerStorageService {
         await db.update(dbRegistrations).set(updatePayload).where(eq(dbRegistrations.id, id));
 
         const rows = await db.select().from(dbRegistrations).where(eq(dbRegistrations.id, id));
+        this.invalidateCache();
         if (rows.length > 0) return rows[0] as any;
       } catch (err) {
         console.error('Neon PostgreSQL registration update error:', err);
@@ -539,6 +541,7 @@ class ServerStorageService {
     if (idx >= 0) {
       const updated = { ...this.memoryState.registrations[idx], ...updates, lastUpdatedAt: now };
       this.memoryState.registrations[idx] = updated;
+      this.invalidateCache();
       return updated;
     }
     return null;
@@ -555,6 +558,7 @@ class ServerStorageService {
       }
     }
     this.memoryState.registrations = this.memoryState.registrations.filter((r) => r.id !== id);
+    this.invalidateCache();
   }
 
   public async resetRegistrations(): Promise<void> {
@@ -568,6 +572,7 @@ class ServerStorageService {
       }
     }
     this.memoryState.registrations = [];
+    this.invalidateCache();
   }
 
   // --- Users ---
@@ -603,6 +608,7 @@ class ServerStorageService {
     if (idx >= 0) this.memoryState.users[idx] = { ...this.memoryState.users[idx], ...user };
     else this.memoryState.users.push(user);
 
+    this.invalidateCache();
     return user;
   }
 
@@ -617,6 +623,7 @@ class ServerStorageService {
       }
     }
     this.memoryState.users = this.memoryState.users.filter((u) => u.id !== id);
+    this.invalidateCache();
   }
 
   // --- Students ---
@@ -658,6 +665,7 @@ class ServerStorageService {
     if (idx >= 0) this.memoryState.students[idx] = { ...this.memoryState.students[idx], ...student };
     else this.memoryState.students.push(student);
 
+    this.invalidateCache();
     return student;
   }
 
@@ -672,6 +680,7 @@ class ServerStorageService {
       }
     }
     this.memoryState.students = this.memoryState.students.filter((s) => s.id !== id);
+    this.invalidateCache();
   }
 
   // --- Trainers ---

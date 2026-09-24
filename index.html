@@ -1,6 +1,94 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      // 1. Error event interceptor (capturing phase) to prevent runtime crash
+      (function () {
+        try {
+          var handler = function (e) {
+            var msg = (e && (e.message || (e.error && e.error.message))) || String(e || '');
+            if (msg.indexOf('fetch') !== -1 && (msg.indexOf('getter') !== -1 || msg.indexOf('read-only') !== -1)) {
+              if (e && e.preventDefault) e.preventDefault();
+              if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
+              return true;
+            }
+          };
+          if (typeof window !== 'undefined') {
+            window.addEventListener('error', handler, true);
+            var prevOnError = window.onerror;
+            window.onerror = function (msg, url, line, col, error) {
+              var s = String(msg || '');
+              if (s.indexOf('fetch') !== -1 && (s.indexOf('getter') !== -1 || s.indexOf('read-only') !== -1)) {
+                return true;
+              }
+              if (typeof prevOnError === 'function') {
+                return prevOnError.apply(this, arguments);
+              }
+              return false;
+            };
+          }
+        } catch (err) {}
+      })();
+
+      // 2. Comprehensive fetch property patch across prototype chain
+      (function () {
+        try {
+          var win = typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null;
+          if (!win) return;
+
+          function patchTarget(target) {
+            if (!target) return;
+            var curr = target.fetch;
+            var p = target;
+            while (p) {
+              try {
+                var desc = Object.getOwnPropertyDescriptor(p, 'fetch');
+                if (desc) {
+                  if (desc.get && !desc.set) {
+                    Object.defineProperty(p, 'fetch', {
+                      get: function () {
+                        return curr;
+                      },
+                      set: function (newVal) {
+                        curr = newVal;
+                      },
+                      configurable: true,
+                      enumerable: true,
+                    });
+                  }
+                  break;
+                }
+              } catch (e) {}
+              p = Object.getPrototypeOf(p);
+            }
+
+            try {
+              var own = Object.getOwnPropertyDescriptor(target, 'fetch');
+              if (!own || (!own.set && !own.writable)) {
+                Object.defineProperty(target, 'fetch', {
+                  get: function () {
+                    return curr;
+                  },
+                  set: function (newVal) {
+                    curr = newVal;
+                  },
+                  configurable: true,
+                  enumerable: true,
+                });
+              }
+            } catch (e) {}
+          }
+
+          patchTarget(win);
+          if (typeof Window !== 'undefined' && Window.prototype) {
+            patchTarget(Window.prototype);
+          }
+          if (typeof globalThis !== 'undefined') {
+            patchTarget(globalThis);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TSNP Unit Assessment Registration & Clearance System</title>

@@ -129,6 +129,9 @@ export function getConnectionString(): { url: string; sourceVar: string } | null
 export function detectProvider(host?: string): string {
   if (!host) return 'PostgreSQL';
   const lower = host.toLowerCase();
+  if (lower.includes('cockroachlabs.cloud') || lower.includes('cockroach')) {
+    return 'CockroachDB Serverless';
+  }
   if (lower.includes('supabase.co') || lower.includes('supabase.com') || lower.includes('pooler.supabase.com')) {
     return 'Supabase PostgreSQL';
   }
