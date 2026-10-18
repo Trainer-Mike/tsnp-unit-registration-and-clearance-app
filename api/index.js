@@ -616,12 +616,12 @@ var INITIAL_USERS = [
     title: "Trainer (System Analysis)",
     password: "trainer123"
   },
-  // HOD: Dr. Kennedy Musumba
+  // HOD: Mr. Michael Olumbe
   {
     id: "user-hod-01",
-    name: "Dr. Kennedy Musumba",
+    name: "Mr. Michael Olumbe",
     email: "hod.computing@shambererenationalpoly.ac.ke",
-    phone: "0799-887-766",
+    phone: "0727-223-766",
     role: "HOD",
     identifierNumber: "TSNP/HOD/012",
     departmentId: "dept-ci",
@@ -643,7 +643,7 @@ var INITIAL_USERS = [
   // System Admin
   {
     id: "user-adm-01",
-    name: "Eng. David Shikuku",
+    name: "Mr. Mike Akhonya",
     email: "admin.ict@shambererenationalpoly.ac.ke",
     phone: "0777-665-544",
     role: "ADMIN",
