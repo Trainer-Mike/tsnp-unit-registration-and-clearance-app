@@ -481,9 +481,9 @@ export const INITIAL_USERS: User[] = [
   // System Admin
   {
     id: 'user-adm-01',
-    name: 'Eng. David Shikuku',
+    name: 'Mr. Mike Akhonya',
     email: 'admin.ict@shambererenationalpoly.ac.ke',
-    phone: '0777-665-544',
+    phone: '0727-223-544',
     role: 'ADMIN',
     identifierNumber: 'TSNP/ADM/001',
     departmentId: 'dept-ci',
